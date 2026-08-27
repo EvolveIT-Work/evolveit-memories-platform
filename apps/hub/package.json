@@ -1,0 +1,22 @@
+{
+  "name": "@evolveit/hub",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@evolveit/redeem": "0.1.0",
+    "@evolveit/shared": "0.1.0",
+    "@supabase/supabase-js": "^2.47.10",
+    "better-sqlite3": "^11.8.1",
+    "pino": "^9.6.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/node": "^22.10.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  }
+}

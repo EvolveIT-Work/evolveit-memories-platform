@@ -1,0 +1,30 @@
+{
+  "name": "memories-platform",
+  "private": true,
+  "version": "0.1.0",
+  "description": "EvolveIT Memories Night Club Digital Operations Platform",
+  "engines": {
+    "node": ">=22"
+  },
+  "workspaces": [
+    "apps/web",
+    "apps/hub",
+    "packages/shared",
+    "packages/redeem"
+  ],
+  "scripts": {
+    "dev:web": "npm run dev -w @evolveit/web",
+    "dev:hub": "npm run start -w @evolveit/hub",
+    "bootstrap": "npx tsx scripts/bootstrap-day1.ts",
+    "verify:day1": "npx tsx scripts/verify-day1.ts"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  },
+  "dependencies": {
+    "@evolveit/shared": "0.1.0",
+    "@supabase/supabase-js": "^2.47.10",
+    "argon2": "^0.41.1"
+  }
+}

@@ -1,0 +1,125 @@
+:root {
+  --ev-bg: #0a0b0c;
+  --ev-bg-elevated: #121416;
+  --ev-bg-page: #f8f9fa;
+  --ev-bg-card: #ffffff;
+  --ev-text-primary: #ecece8;
+  --ev-text-secondary: #9a9e9f;
+  --ev-text-dark: #111111;
+  --ev-text-muted: #6b7380;
+  --ev-brand-navy: #0b1f4b;
+  --ev-brand-crimson: #b8122a;
+  --ev-accent: #c8ccd4;
+  --ev-success: #1a5c2e;
+  --ev-success-bg: #ebf5ee;
+  --ev-warning: #b86800;
+  --ev-error: #b8122a;
+  --ev-border: #d8dce2;
+  --ev-border-dark: #2a2d32;
+  --ev-momo-yellow: #ffcb05;
+  --ev-font-display: Georgia, "Times New Roman", serif;
+  --ev-font-body: Calibri, Arial, sans-serif;
+  --ev-font-mono: "Courier New", monospace;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  font-family: var(--ev-font-body);
+  background: var(--ev-bg-page);
+  color: var(--ev-text-dark);
+}
+
+button {
+  font-family: inherit;
+}
+
+.staff-shell {
+  min-height: 100vh;
+  background: var(--ev-bg-page);
+}
+
+.staff-header {
+  background: var(--ev-brand-navy);
+  color: white;
+  padding: 16px 24px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.card {
+  background: var(--ev-bg-card);
+  border: 1px solid var(--ev-border);
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 420px;
+  margin: 48px auto;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  color: var(--ev-text-muted);
+}
+
+input {
+  width: 100%;
+  border: 1px solid var(--ev-border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  font-size: 16px;
+}
+
+input:focus {
+  outline: none;
+  border: 2px solid var(--ev-brand-navy);
+  padding: 9px 13px;
+}
+
+.field-error {
+  color: var(--ev-brand-crimson);
+  font-size: 12px;
+  margin: -8px 0 16px;
+}
+
+.btn-primary {
+  background: var(--ev-brand-navy);
+  color: white;
+  font-weight: 600;
+  font-size: 14px;
+  border: 0;
+  border-radius: 8px;
+  padding: 12px 24px;
+  min-height: 48px;
+  cursor: pointer;
+  width: 100%;
+}
+
+.btn-primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.muted {
+  color: var(--ev-text-muted);
+  font-size: 14px;
+}
+
+.mono {
+  font-family: var(--ev-font-mono);
+  font-size: 14px;
+}
