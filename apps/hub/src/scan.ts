@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type Database from "better-sqlite3";
-import { createSqliteRedeemAdapter, redeemTicket, type RedeemResult } from "@evolveit/redeem";
+import { redeemTicket, type RedeemResult } from "@evolveit/redeem";
+import { createSqliteRedeemAdapter } from "@evolveit/shared";
 import { verifyDoorDevice } from "./auth";
 import { syncState } from "./sync";
 
