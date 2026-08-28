@@ -1,0 +1,18 @@
+{
+  "name": "@evolveit/scanner",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "jsqr": "^1.4.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3",
+    "vite": "^5.4.0"
+  }
+}

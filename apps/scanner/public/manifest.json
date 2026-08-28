@@ -1,0 +1,10 @@
+{
+  "name": "EvolveIT Door Scanner",
+  "short_name": "Scanner",
+  "start_url": "/",
+  "display": "fullscreen",
+  "orientation": "portrait",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "icons": []
+}

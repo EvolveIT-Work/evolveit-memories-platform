@@ -1,0 +1,27 @@
+/* apps/scanner/src/style.css */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #000; color: #fff; font-family: system-ui, sans-serif; height: 100vh; overflow: hidden; }
+.hidden { display: none !important; }
+
+#login-screen { display: flex; flex-direction: column; gap: 12px; padding: 40px 24px; align-items: center; justify-content: center; height: 100vh; }
+#login-screen input { padding: 12px; font-size: 18px; width: 100%; max-width: 320px; }
+#login-screen button { padding: 12px 24px; font-size: 18px; }
+.error { color: #ff5555; }
+
+#scan-screen { position: relative; width: 100vw; height: 100vh; }
+#camera { width: 100%; height: 100%; object-fit: cover; }
+
+#result-overlay {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 12px; text-align: center; color: #fff;
+}
+.state-label { font-size: 40px; font-weight: 800; }
+.state-sub { font-size: 18px; opacity: 0.85; }
+
+.state-admit { background: #0b8a3a; }
+.state-admit-offline { background: #1b6fd6; }
+.state-already-used { background: #d68a1b; }
+.state-not-valid { background: #b3261e; }
+.state-invalid-code { background: #b3261e; }
+.state-down { background: #3a3a3a; }

@@ -10,6 +10,7 @@
     "@evolveit/redeem": "0.1.0",
     "@evolveit/shared": "0.1.0",
     "@supabase/supabase-js": "^2.47.10",
+    "argon2": "^0.41.1",
     "better-sqlite3": "^11.8.1",
     "pino": "^9.6.0"
   },

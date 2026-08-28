@@ -1,7 +1,8 @@
 /**
- * Venue hub hello-world (Section 12 Day 1).
- * Connects to Supabase (health) and fetches a test snapshot via device auth.
- * redeemTicket is imported from the shared module only (Appendix B #8) — not used until Day 2.
+ * Venue hub (Section 12). Day 1: hello-world + Supabase health check.
+ * Day 2: local CAS (tickets_cache/revocations_cache/redemptions_local/devices),
+ * 60s sync pull/push, and POST /scan — all via the single redeemTicket
+ * module in @evolveit/redeem (Appendix B #8). Plain node:http, not Express.
  */
 import { createServer } from "node:http";
 import { mkdirSync } from "node:fs";
@@ -11,6 +12,9 @@ import Database from "better-sqlite3";
 import pino from "pino";
 import type { HubTestSnapshot } from "@evolveit/shared";
 import { redeemTicket } from "@evolveit/redeem";
+import { applyCasSchema } from "./db-schema";
+import { createSyncRunner, syncState } from "./sync";
+import { handleLogin, handleScan } from "./scan";
 
 export { redeemTicket };
 
@@ -41,6 +45,7 @@ db.exec(`
     tenant_id TEXT NOT NULL
   );
 `);
+applyCasSchema(db);
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: { persistSession: false, autoRefreshToken: false },
@@ -91,20 +96,50 @@ async function hello(): Promise<HubTestSnapshot> {
   return snapshot;
 }
 
+const sync = createSyncRunner({
+  db,
+  platformUrl: PLATFORM_URL,
+  deviceAuthHeader: `Device ${HUB_DEVICE_ID}.${HUB_API_KEY}`,
+  log,
+});
+
 const server = createServer(async (req, res) => {
+  if (req.method === "OPTIONS") {
+    res.writeHead(204, {
+      "access-control-allow-origin": "*",
+      "access-control-allow-methods": "GET,POST,OPTIONS",
+      "access-control-allow-headers": "content-type,authorization",
+    });
+    res.end();
+    return;
+  }
+
   if (req.url === "/health" && req.method === "GET") {
     res.writeHead(200, { "content-type": "application/json" });
     res.end(
       JSON.stringify({
         ok: true,
         service: "evolveit-hub",
-        day: 1,
+        day: 2,
         last_snapshot_at: lastSnapshot?.generated_at ?? null,
         last_error: lastError,
+        sync_ok: syncState.lastPullOk,
+        last_sync_at: syncState.lastPullAt,
       }),
     );
     return;
   }
+
+  if (req.url === "/login" && req.method === "POST") {
+    await handleLogin(req, res, db);
+    return;
+  }
+
+  if (req.url === "/scan" && req.method === "POST") {
+    await handleScan(req, res, db);
+    return;
+  }
+
   res.writeHead(404);
   res.end();
 });
@@ -118,4 +153,5 @@ server.listen(PORT, async () => {
     lastError = err instanceof Error ? err.message : "unknown";
     log.error({ msg: "hub_hello_failed", err: lastError });
   }
+  sync.start();
 });

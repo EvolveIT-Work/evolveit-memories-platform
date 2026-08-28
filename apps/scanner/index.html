@@ -1,0 +1,28 @@
+<!-- apps/scanner/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>EvolveIT Door Scanner</title>
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <div id="login-screen">
+    <h1>Door Scanner</h1>
+    <input id="hub-url" placeholder="Hub LAN URL (e.g. http://hub.local:8787)" autocomplete="off" />
+    <input id="device-id" placeholder="Device ID" autocomplete="off" />
+    <input id="api-key" placeholder="API key" type="password" autocomplete="off" />
+    <button id="login-btn">Sign in</button>
+    <p id="login-error" class="error"></p>
+  </div>
+
+  <div id="scan-screen" class="hidden">
+    <video id="camera" playsinline autoplay muted></video>
+    <div id="result-overlay" class="hidden"></div>
+  </div>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
