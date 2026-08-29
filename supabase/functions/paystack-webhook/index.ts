@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
+import { encryptTotpSecret } from '@evolveit/shared';
 
 // Paystack webhook handler (Edge Function)
 // - Verifies HMAC-SHA512 on raw body against x-paystack-signature
@@ -34,16 +35,11 @@ function timingSafeEqualHex(aHex: string, bHex: string) {
 }
 
 function encryptSecretWithPlatformKey(secret: Buffer): string {
+  // Delegates to @evolveit/shared so hub, cloud redemption, and the live
+  // ticket session all decrypt with the exact same AES-256-GCM layout
+  // (iv || authTag || ciphertext). Do not reimplement this inline.
   const key = Buffer.from(PLATFORM_AES_KEY_B64, 'base64');
-  if (key.length !== 32) {
-    throw new Error('platform AES key must be 32 bytes (base64 of 32 bytes)');
-  }
-  const iv = crypto.randomBytes(12); // 96-bit nonce for GCM
-  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
-  const ciphertext = Buffer.concat([cipher.update(secret), cipher.final()]);
-  const tag = cipher.getAuthTag();
-  // Store as iv || ciphertext || tag, base64-encoded
-  return Buffer.concat([iv, ciphertext, tag]).toString('base64');
+  return encryptTotpSecret(secret, key).toString('base64');
 }
 
 // Supabase Functions runtime compatibility: export as default handler

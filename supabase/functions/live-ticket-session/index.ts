@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
+import { decryptTotpSecret } from '@evolveit/shared';
 
 // Extremely narrow Edge Function: After phone OTP, return material the browser needs for local TOTP
 // - Expects POST JSON { ticket_id }
@@ -20,17 +21,11 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !PLATFORM_AES_KEY_B64) {
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
 
 function decryptPlatformEncryptedBase64(encB64: string): Buffer {
+  // Delegates to @evolveit/shared so this matches the exact layout
+  // paystack-webhook encrypted with (iv || authTag || ciphertext) —
+  // the two must never drift independently again.
   const key = Buffer.from(PLATFORM_AES_KEY_B64, 'base64');
-  if (key.length !== 32) throw new Error('platform AES key invalid length');
-  const data = Buffer.from(encB64, 'base64');
-  if (data.length < 12 + 16) throw new Error('ciphertext too short');
-  const iv = data.slice(0, 12);
-  const tag = data.slice(data.length - 16);
-  const ciphertext = data.slice(12, data.length - 16);
-  const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
-  decipher.setAuthTag(tag);
-  const plaintext = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
-  return plaintext;
+  return decryptTotpSecret(Buffer.from(encB64, 'base64'), key);
 }
 
 export default async function handler(req: any, res: any) {

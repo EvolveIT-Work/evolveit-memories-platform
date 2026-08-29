@@ -1,9 +1,16 @@
 import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase-service';
+import { decryptTotpSecret } from '@evolveit/shared';
+import { getPlatformAesKey } from '@/lib/pg-pool';
 import crypto from 'crypto';
 
 // Server route proxying to DB to create a live ticket session.
 // This keeps the service role key server-side and provides a single narrow endpoint for the browser.
+//
+// This is the route the browser (apps/web/src/app/t/[ticketId]/page.tsx)
+// actually calls — the file under supabase/functions/live-ticket-session
+// looks identical in purpose but is never deployed/reachable in this
+// project. Fix decryption here, not there.
 
 export async function POST(req: Request) {
   try {
@@ -32,22 +39,13 @@ export async function POST(req: Request) {
     if (!ticket) return NextResponse.json({ error: 'ticket not found' }, { status: 404 });
     if (!ticket.totp_secret_enc) return NextResponse.json({ error: 'no totp secret' }, { status: 400 });
 
-    // Decrypt using platform key (server-side)
-    const PLATFORM_AES_KEY_B64 = process.env.PLATFORM_AES_KEY_B64!;
-    const key = Buffer.from(PLATFORM_AES_KEY_B64, 'base64');
-    if (key.length !== 32) return NextResponse.json({ error: 'server config' }, { status: 500 });
-
-    const dataBuf = Buffer.from(ticket.totp_secret_enc, 'base64');
-    if (dataBuf.length < 12 + 16) return NextResponse.json({ error: 'ciphertext invalid' }, { status: 500 });
-    const iv = dataBuf.slice(0, 12);
-    const tag = dataBuf.slice(dataBuf.length - 16);
-    const ciphertext = dataBuf.slice(12, dataBuf.length - 16);
-
+    // Decrypt using the shared crypto module — same AES-256-GCM layout
+    // (iv || authTag || ciphertext) used everywhere else this secret is
+    // touched (paystack-webhook, sync-pull, the redeem adapters).
     let plaintext: Buffer;
     try {
-      const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
-      decipher.setAuthTag(tag);
-      plaintext = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
+      const key = getPlatformAesKey();
+      plaintext = decryptTotpSecret(Buffer.from(ticket.totp_secret_enc, 'base64'), key);
     } catch (e) {
       console.error('api/live-ticket-session: decryption error');
       return NextResponse.json({ error: 'decryption error' }, { status: 500 });

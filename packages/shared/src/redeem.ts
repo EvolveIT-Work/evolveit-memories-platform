@@ -14,8 +14,12 @@ export interface TicketRecord {
   status: 'issued' | 'used' | 'voided' | 'reserved';
   holder_name: string;
   ticket_type: string;
-  totp_secret?: string;
-  totp_secret_enc?: string | Buffer;
+  /**
+   * Decrypted, raw-byte TOTP secret. Adapters must always decrypt before
+   * returning a TicketRecord — never hand back ciphertext here. Undefined
+   * means the ticket has no usable secret (verification fails closed).
+   */
+  totp_secret?: Buffer;
 }
 
 export type RedeemResult =
@@ -74,16 +78,10 @@ export async function redeemTicket(input: RedeemInput, adapter: RedeemAdapter): 
     return { outcome: 'not_valid', reason: 'voided' };
   }
 
-  const secret = ticket.totp_secret ?? ticket.totp_secret_enc;
-  if (typeof secret === 'string') {
-    if (!verifyTotpCode(secret, totpCode, Date.now(), 1)) {
-      return { outcome: 'invalid_code' };
-    }
-  } else if (secret instanceof Buffer) {
-    if (!verifyTotpCode(secret.toString('utf8'), totpCode, Date.now(), 1)) {
-      return { outcome: 'invalid_code' };
-    }
-  } else {
+  if (!(ticket.totp_secret instanceof Buffer) || ticket.totp_secret.length === 0) {
+    return { outcome: 'invalid_code' };
+  }
+  if (!verifyTotpCode(ticket.totp_secret, totpCode, Date.now(), 1)) {
     return { outcome: 'invalid_code' };
   }
 

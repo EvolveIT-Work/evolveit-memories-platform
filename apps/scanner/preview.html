@@ -1,0 +1,67 @@
+<!-- apps/scanner/preview.html -->
+<!-- Manual visual check for the six scanner result states (Fix 4). Not
+     part of the shipped app — dev-only harness that calls the real
+     renderResult()/clearResult() from src/states.ts, so what you see
+     here is exactly what the scanner renders, no camera or hub needed. -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Scanner States Preview</title>
+  <link rel="stylesheet" href="/src/style.css" />
+  <style>
+    #controls {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 10;
+      display: flex; flex-wrap: wrap; gap: 8px; padding: 8px;
+      background: rgba(0,0,0,0.6);
+    }
+    #controls button {
+      padding: 8px 12px; font-size: 14px; cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div id="controls"></div>
+  <div id="scan-screen">
+    <div id="result-overlay" class="hidden"></div>
+  </div>
+
+  <script type="module">
+    import { renderResult, clearResult } from "/src/states.ts";
+
+    const overlay = document.getElementById("result-overlay");
+    const controls = document.getElementById("controls");
+
+    const cases = [
+      { key: "admit", label: "1. Valid ticket", state: "admit",
+        detail: { outcome: "admit", holderName: "Ama Owusu", ticketType: "General Admission" } },
+      { key: "already_used", label: "2. Already used", state: "already_used",
+        detail: { outcome: "already_used", scannedAt: new Date().toISOString(), doorLabel: "Door 2" } },
+      { key: "not_valid_voided", label: "3a. Not valid (voided)", state: "not_valid",
+        detail: { outcome: "not_valid", reason: "voided" } },
+      { key: "not_valid_expired", label: "3b. Not valid (expired)", state: "not_valid",
+        detail: { outcome: "not_valid", reason: "expired" } },
+      { key: "not_valid_wrong_event", label: "3c. Not valid (wrong event)", state: "not_valid",
+        detail: { outcome: "not_valid", reason: "wrong_event" } },
+      { key: "invalid_code", label: "4. Invalid QR format", state: "invalid_code", detail: null },
+      { key: "admit_offline", label: "5. Admit (offline)", state: "admit_offline",
+        detail: { outcome: "admit", offline: true, holderName: "Kwame Boateng", ticketType: "VIP" } },
+      { key: "hub_and_cloud_down", label: "6. Hub + cloud down", state: "hub_and_cloud_down", detail: null },
+      { key: "clear", label: "Clear", state: null, detail: null },
+    ];
+
+    for (const c of cases) {
+      const btn = document.createElement("button");
+      btn.textContent = c.label;
+      btn.addEventListener("click", () => {
+        if (c.state === null) {
+          clearResult(overlay);
+        } else {
+          renderResult(overlay, c.state, c.detail);
+        }
+      });
+      controls.appendChild(btn);
+    }
+  </script>
+</body>
+</html>

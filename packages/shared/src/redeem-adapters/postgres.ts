@@ -1,14 +1,30 @@
+import { decryptTotpSecret, ensure256BitKey } from '../crypto';
 import type { RedeemAdapter, TicketRecord } from '../redeem';
 
 export type PostgresLikeClient = {
   query: (sql: string, params?: unknown[]) => Promise<{ rows: Record<string, unknown>[] }>;
 };
 
-export function createPostgresRedeemAdapter(client: PostgresLikeClient): RedeemAdapter {
+/**
+ * platformKey: the 32-byte AES-256-GCM platform key (same key used by
+ * paystack-webhook to encrypt totp_secret_enc at issuance). Required to
+ * decrypt tickets.totp_secret_enc (base64 text column) into the raw
+ * secret bytes redeemTicket() needs. Never returns ciphertext.
+ */
+export function createPostgresRedeemAdapter(client: PostgresLikeClient, platformKey: Buffer): RedeemAdapter {
+  const key = ensure256BitKey(platformKey);
+
   return {
     async getTicket(ticketId: string): Promise<TicketRecord | null> {
+      // tickets has no holder_name/ticket_type columns (Section 10) — join
+      // users.display_name and ticket_types.name.
       const result = await client.query(
-        `SELECT id, event_id, status, holder_name, ticket_type, totp_secret_enc AS totp_secret_enc FROM tickets WHERE id = $1`,
+        `SELECT t.id, t.event_id, t.status, u.display_name AS holder_name,
+                tt.name AS ticket_type, t.totp_secret_enc AS totp_secret_enc
+         FROM tickets t
+         JOIN users u ON u.id = t.buyer_user_id
+         JOIN ticket_types tt ON tt.id = t.ticket_type_id
+         WHERE t.id = $1`,
         [ticketId],
       );
 
@@ -17,13 +33,25 @@ export function createPostgresRedeemAdapter(client: PostgresLikeClient): RedeemA
         return null;
       }
 
+      let totp_secret: Buffer | undefined;
+      const encColumn = row.totp_secret_enc;
+      if (typeof encColumn === 'string' && encColumn.length > 0) {
+        try {
+          totp_secret = decryptTotpSecret(Buffer.from(encColumn, 'base64'), key);
+        } catch {
+          // Corrupt/undecryptable ciphertext fails closed: redeemTicket treats
+          // a missing secret as invalid_code, never as raw ciphertext.
+          totp_secret = undefined;
+        }
+      }
+
       return {
         id: String(row.id ?? ''),
         event_id: String(row.event_id ?? ''),
         status: String(row.status ?? 'issued') as TicketRecord['status'],
         holder_name: String(row.holder_name ?? ''),
         ticket_type: String(row.ticket_type ?? ''),
-        totp_secret_enc: row.totp_secret_enc as string | Buffer | undefined,
+        totp_secret,
       };
     },
 
@@ -51,12 +79,17 @@ export function createPostgresRedeemAdapter(client: PostgresLikeClient): RedeemA
     },
 
     async tryRedeem(args): Promise<{ admitted: boolean; existing?: { scannedAt: string; doorLabel: string | null } }> {
+      // ticket_redemptions (Section 10) is only (ticket_id, tenant_id,
+      // device_id, redeemed_at) — no scanned_by/door_label columns exist on
+      // the cloud table (those are hub-local cache convenience fields).
+      // tenant_id is pulled from tickets in the same statement so callers
+      // don't need to supply it separately.
       const result = await client.query(
-        `INSERT INTO ticket_redemptions (ticket_id, device_id, scanned_by, door_label)
-         VALUES ($1, $2, $3, $4)
+        `INSERT INTO ticket_redemptions (ticket_id, tenant_id, device_id)
+         SELECT $1, tenant_id, $2 FROM tickets WHERE id = $1
          ON CONFLICT (ticket_id) DO NOTHING
          RETURNING ticket_id`,
-        [args.ticketId, args.deviceId, args.scannedBy ?? null, args.doorLabel ?? null],
+        [args.ticketId, args.deviceId],
       );
 
       if (result.rows.length > 0) {
@@ -69,7 +102,7 @@ export function createPostgresRedeemAdapter(client: PostgresLikeClient): RedeemA
       }
 
       const existingResult = await client.query(
-        `SELECT scanned_at, door_label FROM ticket_redemptions WHERE ticket_id = $1 LIMIT 1`,
+        `SELECT redeemed_at FROM ticket_redemptions WHERE ticket_id = $1 LIMIT 1`,
         [args.ticketId],
       );
 
@@ -77,8 +110,8 @@ export function createPostgresRedeemAdapter(client: PostgresLikeClient): RedeemA
       return {
         admitted: false,
         existing: {
-          scannedAt: existingRow?.scanned_at ? String(existingRow.scanned_at) : new Date(0).toISOString(),
-          doorLabel: existingRow?.door_label ? String(existingRow.door_label) : null,
+          scannedAt: existingRow?.redeemed_at ? String(existingRow.redeemed_at) : new Date(0).toISOString(),
+          doorLabel: null,
         },
       };
     },

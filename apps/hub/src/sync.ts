@@ -139,8 +139,21 @@ export function createSyncRunner(opts: {
       });
       if (!res.ok) throw new Error(`sync_push_${res.status}`);
 
+      // Mark synced only the rows the server actually confirmed (admitted
+      // or already_used are both terminal outcomes). A row reported as
+      // "error", or simply missing from the response, stays unsynced so
+      // the next 60s cycle retries it — do not mark on a bare 200.
+      const body = (await res.json()) as { results?: { id: number; outcome: string }[] };
+      const confirmed = new Set(
+        (body.results ?? [])
+          .filter((r) => r.outcome === "admitted" || r.outcome === "already_used")
+          .map((r) => r.id),
+      );
+
       const markAll = db.transaction(() => {
-        for (const r of rows) markSynced.run(r.id);
+        for (const r of rows) {
+          if (confirmed.has(r.id)) markSynced.run(r.id);
+        }
       });
       markAll();
     } catch (err) {

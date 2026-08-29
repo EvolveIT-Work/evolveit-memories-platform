@@ -11,17 +11,21 @@ export function ensure256BitKey(key: Buffer): Buffer {
   return key;
 }
 
-export function encryptTotpSecret(plaintext: string, key: Buffer): Buffer {
+/**
+ * Binary-safe: plaintext is the raw TOTP secret bytes, never coerced
+ * through a string encoding. Layout: iv || authTag || ciphertext.
+ */
+export function encryptTotpSecret(plaintext: Buffer, key: Buffer): Buffer {
   const normalizedKey = ensure256BitKey(key);
   const iv = randomBytes(IV_LENGTH);
   const cipher = createCipheriv(AES_256_GCM_ALGORITHM, normalizedKey, iv);
-  const encrypted = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
+  const encrypted = Buffer.concat([cipher.update(plaintext), cipher.final()]);
   const authTag = cipher.getAuthTag();
 
   return Buffer.concat([iv, authTag, encrypted]);
 }
 
-export function decryptTotpSecret(ciphertext: Buffer, key: Buffer): string {
+export function decryptTotpSecret(ciphertext: Buffer, key: Buffer): Buffer {
   const normalizedKey = ensure256BitKey(key);
   if (ciphertext.length < IV_LENGTH + AUTH_TAG_LENGTH) {
     throw new Error('Ciphertext is too short to be a valid AES-256-GCM payload.');
@@ -34,6 +38,5 @@ export function decryptTotpSecret(ciphertext: Buffer, key: Buffer): string {
   const decipher = createDecipheriv(AES_256_GCM_ALGORITHM, normalizedKey, iv);
   decipher.setAuthTag(authTag);
 
-  const decrypted = Buffer.concat([decipher.update(payload), decipher.final()]);
-  return decrypted.toString('utf8');
+  return Buffer.concat([decipher.update(payload), decipher.final()]);
 }

@@ -20,13 +20,30 @@ export function createSqliteRedeemAdapter(db: SqliteLikeDb): RedeemAdapter {
         return null;
       }
 
+      // Populated by the Day 2 hub sync (sync-pull): the cloud decrypts
+      // totp_secret_enc server-side and sends the raw secret bytes over
+      // JSON as base64 text, cached here under the same column name.
+      // Decode back to a Buffer — never pass the base64 string through as
+      // if it were the secret itself.
+      let totp_secret: Buffer | undefined;
+      const cached = row.totp_secret_enc;
+      if (typeof cached === 'string' && cached.length > 0) {
+        try {
+          totp_secret = Buffer.from(cached, 'base64');
+        } catch {
+          totp_secret = undefined;
+        }
+      } else if (Buffer.isBuffer(cached)) {
+        totp_secret = cached;
+      }
+
       return {
         id: String(row.id ?? ''),
         event_id: String(row.event_id ?? ''),
         status: String(row.status ?? 'issued') as TicketRecord['status'],
         holder_name: String(row.holder_name ?? ''),
         ticket_type: String(row.ticket_type ?? ''),
-        totp_secret_enc: row.totp_secret_enc as string | Buffer | undefined,
+        totp_secret,
       };
     },
 

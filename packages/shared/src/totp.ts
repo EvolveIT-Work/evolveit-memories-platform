@@ -3,41 +3,17 @@ import { createHmac } from 'node:crypto';
 const TOTP_STEP_SECONDS = 30;
 const TOTP_CODE_DIGITS = 6;
 
-export function decodeBase32(value: string): Buffer {
-  const normalized = value.trim().replace(/=+$/g, '').toUpperCase();
-  if (!normalized) {
-    return Buffer.alloc(0);
-  }
-
-  let bits = '';
-  for (const char of normalized) {
-    const code = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'.indexOf(char);
-    if (code < 0) {
-      throw new Error(`Invalid base32 character in TOTP secret: ${char}`);
-    }
-    bits += code.toString(2).padStart(5, '0');
-  }
-
-  const bytes: number[] = [];
-  for (let index = 0; index + 8 <= bits.length; index += 8) {
-    bytes.push(parseInt(bits.slice(index, index + 8), 2));
-  }
-
-  return Buffer.from(bytes);
-}
-
-export function getTotpSecretBytes(secret: string): Buffer {
-  const normalized = secret.trim();
-  if (!normalized) {
-    return Buffer.alloc(0);
-  }
-
-  const isBase32 = /^[A-Za-z2-7]+=*$/.test(normalized) && !/[0-9]/.test(normalized);
-  return isBase32 ? decodeBase32(normalized) : Buffer.from(normalized, 'utf8');
-}
-
-export function generateTotpCode(secret: string, timestampMs = Date.now()): string {
-  const secretBytes = getTotpSecretBytes(secret);
+/**
+ * The TOTP secret is always raw binary (160-bit random, generated in
+ * paystack-webhook). It must be used as raw bytes for HMAC — the browser
+ * (apps/web/src/app/t/[ticketId]/page.tsx) imports it via WebCrypto
+ * `importKey('raw', bytes, ...)` with no string/encoding step, so the
+ * Node/hub side must match exactly. Do not round-trip through a string
+ * encoding (utf8 mangles arbitrary bytes; guessing base32 is unreliable).
+ * Base64 is used only at serialization boundaries (DB column, JSON, HTTP).
+ */
+export function generateTotpCode(secret: Buffer, timestampMs = Date.now()): string {
+  const secretBytes = secret;
   const counter = Math.floor(timestampMs / 1000 / TOTP_STEP_SECONDS);
   const buffer = Buffer.alloc(8);
   let value = BigInt(counter);
@@ -60,7 +36,7 @@ export function generateTotpCode(secret: string, timestampMs = Date.now()): stri
   return (code % 10 ** TOTP_CODE_DIGITS).toString().padStart(TOTP_CODE_DIGITS, '0');
 }
 
-export function verifyTotpCode(secret: string, code: string, nowMs = Date.now(), toleranceWindows = 1): boolean {
+export function verifyTotpCode(secret: Buffer, code: string, nowMs = Date.now(), toleranceWindows = 1): boolean {
   const normalizedCode = code.trim();
   if (!/^\d{6}$/.test(normalizedCode)) {
     return false;

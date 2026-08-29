@@ -9,14 +9,17 @@
   "workspaces": [
     "apps/web",
     "apps/hub",
+    "apps/scanner",
     "packages/shared",
     "packages/redeem"
   ],
   "scripts": {
     "dev:web": "npm run dev -w @evolveit/web",
     "dev:hub": "npm run start -w @evolveit/hub",
+    "dev:scanner": "npm run dev -w @evolveit/scanner",
     "bootstrap": "npx tsx scripts/bootstrap-day1.ts",
-    "verify:day1": "npx tsx scripts/verify-day1.ts"
+    "verify:day1": "npx tsx scripts/verify-day1.ts",
+    "verify:day2": "npx tsx scripts/verify-day2.ts"
   },
   "devDependencies": {
     "tsx": "^4.19.2",
