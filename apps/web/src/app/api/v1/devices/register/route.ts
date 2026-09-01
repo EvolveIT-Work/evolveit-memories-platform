@@ -24,9 +24,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 
-  const body = (await request.json()) as { role?: string; label?: string };
+  const body = (await request.json()) as { role?: string; label?: string; station_id?: string };
   if (!body.role || !DEVICE_ROLES.includes(body.role as DeviceRole) || !body.label) {
     return NextResponse.json({ error: "invalid_body" }, { status: 400 });
+  }
+  if ((body.role === "bar_display" || body.role === "kitchen_display") && !body.station_id) {
+    return NextResponse.json({ error: "station_id is required for bar_display/kitchen_display" }, { status: 400 });
   }
 
   const tenantId = allowed[0].tenant_id as string;
@@ -41,8 +44,9 @@ export async function POST(request: Request) {
       role: body.role,
       label: body.label,
       credential_hash,
+      station_id: body.station_id ?? null,
     })
-    .select("id, tenant_id, role, label")
+    .select("id, tenant_id, role, label, station_id")
     .single();
 
   if (error || !data) {

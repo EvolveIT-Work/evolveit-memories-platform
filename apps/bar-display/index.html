@@ -1,0 +1,31 @@
+<!-- apps/bar-display/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>EvolveIT Order Queue</title>
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <div id="login-screen">
+    <h1>Order Queue</h1>
+    <input id="device-id" placeholder="Device ID" autocomplete="off" />
+    <input id="api-key" placeholder="API key" type="password" autocomplete="off" />
+    <input id="platform-url" placeholder="Platform URL (e.g. http://localhost:3000)" autocomplete="off" />
+    <button id="login-btn">Sign in</button>
+    <p id="login-error" class="error"></p>
+  </div>
+
+  <div id="queue-screen" class="hidden">
+    <header id="queue-header">
+      <span id="queue-title"></span>
+      <span id="queue-banner" class="hidden"></span>
+    </header>
+    <div id="queue-grid"></div>
+  </div>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

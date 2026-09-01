@@ -10,16 +10,23 @@
     "apps/web",
     "apps/hub",
     "apps/scanner",
+    "apps/bar-display",
     "packages/shared",
     "packages/redeem"
   ],
   "scripts": {
     "dev:web": "npm run dev -w @evolveit/web",
+    "build:web": "npm run build -w @evolveit/web",
     "dev:hub": "npm run start -w @evolveit/hub",
     "dev:scanner": "npm run dev -w @evolveit/scanner",
+    "dev:bar-display": "npm run dev -w @evolveit/bar-display",
     "bootstrap": "npx tsx scripts/bootstrap-day1.ts",
     "verify:day1": "npx tsx scripts/verify-day1.ts",
-    "verify:day2": "npx tsx scripts/verify-day2.ts"
+    "verify:day2": "npx tsx scripts/verify-day2.ts",
+    "verify:day3": "npx tsx scripts/verify-day3.ts",
+    "verify:day3-display": "npx tsx scripts/verify-day3-display.ts",
+    "verify:day3-waiter": "npx tsx scripts/verify-day3-waiter.ts",
+    "verify:day3-waiter-cash": "npx tsx scripts/verify-day3-waiter-cash.ts"
   },
   "devDependencies": {
     "tsx": "^4.19.2",

@@ -18,6 +18,10 @@ Acceptance: `DAY 1 GREEN` from `scripts/verify-day1.ts` (manager sign-in, cross-
 
 Do not start Day 2 until that check is green on a given environment.
 
+**Day 3 complete.** Counter/table ordering, bar/kitchen display queue, and cash-order DB functions (`verify:day3`, `verify:day3-display`); waiter table claiming + My Tables/All Tables (`verify:day3-waiter`); table detail + Cash Received (`verify:day3-waiter-cash`); and the waiter PWA UI at `/staff/waiter` (builds clean via `npm run build:web`, not yet manually clicked through). See `docs/EvolveIT_Memories_Platform_Final.md` Section 04/09.
+
+Day 4 not started: lost/stolen ticket recovery, ticket transfer, installment payments, reservation deposits, the organiser portal, and settlement. Day 5 not started: owner dashboard, shift close report, offline drill, second tenant, deployment.
+
 ## Full specification
 
 See [docs/EvolveIT_Memories_Platform_Final.md](docs/EvolveIT_Memories_Platform_Final.md).

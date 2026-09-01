@@ -17,11 +17,13 @@ import { getPlatformAesKey } from "@/lib/pg-pool";
 // - Verifies HMAC-SHA512 on the raw body against x-paystack-signature
 //   before parsing JSON (Appendix B #2).
 // - Idempotent insert into webhook_events first; duplicate -> 200.
-// - On charge.success, generates per-ticket 160-bit secrets, encrypts
-//   each with the shared crypto module, and calls
-//   issue_tickets_for_payment (one atomic transaction: stock decrement,
-//   ticket insert, ledger insert, delivery enqueue).
-// Never calls redeemTicket() here — this issues tickets, it never admits.
+// - Branches on metadata.kind: 'ticket' (default, for backward
+//   compatibility with the existing checkout flow) calls
+//   issue_tickets_for_payment; 'order' (Section 04 counter/table
+//   ordering) calls create_order_for_payment. Both are single atomic
+//   transactions — nothing is written pre-payment either way.
+// Never calls redeemTicket() here — this issues tickets/orders, it never
+// admits or serves them.
 
 function timingSafeEqualHex(aHex: string, bHex: string): boolean {
   try {
@@ -104,6 +106,55 @@ export async function POST(request: Request) {
 
   const metadata = (dataField.metadata ?? {}) as Record<string, unknown>;
   const tenantId = (metadata.tenant_id as string | undefined) ?? (metadata.tenantId as string | undefined);
+  const kind = (metadata.kind as string | undefined) ?? "ticket";
+  const paystackRef = (dataField.reference as string | undefined) ?? null;
+  const amount = Number(dataField.amount ?? payload.amount ?? 0);
+
+  if (!tenantId) {
+    return NextResponse.json({ error: "missing tenant_id in metadata" }, { status: 400 });
+  }
+
+  if (kind === "order") {
+    const tableId = (metadata.table_id as string | undefined) ?? null;
+    const stationId = (metadata.station_id as string | undefined) ?? null;
+    const customerPhone = (metadata.customer_phone as string | undefined) ?? null;
+    const items = metadata.items;
+
+    if (!customerPhone) {
+      return NextResponse.json({ error: "missing customer_phone" }, { status: 400 });
+    }
+    if ((tableId === null) === (stationId === null)) {
+      return NextResponse.json({ error: "exactly one of table_id/station_id required" }, { status: 400 });
+    }
+    if (!Array.isArray(items) || items.length === 0) {
+      return NextResponse.json({ error: "missing items" }, { status: 400 });
+    }
+
+    // create_order_for_payment lives in the app schema (same reasoning
+    // as issue_tickets_for_payment below) and recomputes the total from
+    // menu_items.price_pesewas server-side — the client-submitted amount
+    // is never trusted for the actual charge validation.
+    const orderResp = await service.schema("app").rpc("create_order_for_payment", {
+      p_tenant_id: tenantId,
+      p_table_id: tableId,
+      p_station_id: stationId,
+      p_customer_phone: customerPhone,
+      p_paystack_ref: paystackRef,
+      p_items: items,
+      p_amount_pesewas: amount,
+    });
+
+    if (orderResp.error) {
+      return NextResponse.json({ error: "order creation failed", detail: orderResp.error.message }, { status: 400 });
+    }
+
+    // create_order_for_payment now RETURNS TABLE (order_id, display_token)
+    // — supabase-js returns this as an array of one row, not a scalar.
+    const orderRow = (orderResp.data as Array<{ order_id: string; display_token: string }> | null)?.[0];
+    return NextResponse.json({ status: "ok", order_id: orderRow?.order_id, display_token: orderRow?.display_token });
+  }
+
+  // kind === 'ticket' (default)
   const buyerUserId =
     (metadata.buyer_user_id as string | undefined) ??
     (metadata.buyerUserId as string | undefined) ??
@@ -111,9 +162,8 @@ export async function POST(request: Request) {
   const ticketTypeId =
     (metadata.ticket_type_id as string | undefined) ?? (metadata.ticketTypeId as string | undefined);
   const qty = Number(metadata.qty ?? metadata.quantity ?? 1);
-  const amount = Number(dataField.amount ?? payload.amount ?? 0);
 
-  if (!tenantId || !ticketTypeId || !buyerUserId) {
+  if (!ticketTypeId || !buyerUserId) {
     return NextResponse.json({ error: "missing metadata for issuance" }, { status: 400 });
   }
   if (!Number.isInteger(qty) || qty <= 0) {
@@ -142,7 +192,7 @@ export async function POST(request: Request) {
   const rpcResp = await service.schema("app").rpc("issue_tickets_for_payment", {
     p_tenant_id: tenantId,
     p_buyer_user_id: buyerUserId,
-    p_paystack_ref: (dataField.reference as string | undefined) ?? null,
+    p_paystack_ref: paystackRef,
     p_ticket_type_id: ticketTypeId,
     p_qty: qty,
     p_amount_pesewas: amount,

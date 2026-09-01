@@ -50,11 +50,12 @@ export default function LiveTicketPage({ params }: { params: { ticketId: string 
 
   useEffect(() => {
     if (!secretB64) return;
+    const secret = secretB64;
     let cancelled = false;
 
     async function tick() {
       if (cancelled) return;
-      const code = await generateTotpCode(secretB64, Date.now());
+      const code = await generateTotpCode(secret, Date.now());
       setCurrentCode(code);
     }
 

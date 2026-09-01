@@ -40,6 +40,11 @@ export default async function StaffHomePage() {
         <p className="mono">{profile?.email}</p>
         <p className="muted">Roles: {(roles ?? []).map((r) => r.role).join(", ") || "none"}</p>
         {profileError ? <p className="field-error">{profileError.message}</p> : null}
+        {(roles ?? []).some((r) => ["waiter", "manager", "owner"].includes(r.role)) && (
+          <p>
+            <a href="/staff/waiter">Open Waiter Tables →</a>
+          </p>
+        )}
         <h2 style={{ fontSize: 18, fontWeight: 700 }}>Tenant</h2>
         <p>
           {tenant?.name} <span className="mono">({tenant?.slug})</span>
